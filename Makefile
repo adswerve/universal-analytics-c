@@ -4,22 +4,17 @@
 
 all: universal-analytics.o 
 
-test: dictionary.o dictionary-test.exe 
+test: testing.exe
 
 clean:
-	rm -v testing.exe universal-analytics.o 
+	@rm -fv testing.exe universal-analytics.o 
 
 testing.exe: test.c universal-analytics.o 
-	gcc -o $@ $^
+	gcc -o $@ -l curl $^
 
 
 universal-analytics.o: universal-analytics.c universal-analytics.h
 	gcc -o $@ -c $<
-
-
-# This one is our giant prototype of doom...
-bigtest: bigger-test.c
-	 gcc -ggdb -Wall $< -o $@ -l curl
 
 
 
