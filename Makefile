@@ -1,4 +1,5 @@
-
+DEBUG_FLAGS="-ggdb"
+#COMPILE_FLAGS="-O3"
 
 .PHONY: all clean test
 
@@ -10,11 +11,11 @@ clean:
 	@rm -fv testing.exe universal-analytics.o 
 
 testing.exe: test.c universal-analytics.o 
-	gcc -o $@ -l curl $^
+	gcc $(COMPILE_FLAGS) $(DEBUG_FLAGS) -o $@ -l curl $^
 
 
 universal-analytics.o: universal-analytics.c universal-analytics.h
-	gcc -o $@ -c $<
+	gcc $(COMPILE_FLAGS) $(DEBUG_FLAGS) -o $@ -c $<
 
 
 

@@ -4,40 +4,61 @@
 
 #include "universal-analytics.h"
 
-int getParameterIndex(trackingField_t field, int slot_id){
-  switch(field){
-    case UA_CUSTOM_DIMENSION: 
-      return UA_START_CDIMENSIONS + slot_id -1;
-    case UA_CUSTOM_METRIC: 
-      return UA_START_CMETRICS + slot_id -1;
-    default:
-      return field;
+#define UA_MEM_MAGIC_UNSET 0xDEADC0DE
+#define UA_MEM_MAGIC_CONFIG 0xADDED00
+#define UA_MEMSIZE_PARAM (2 * UA_MAX_PARAMETERS * sizeof(UAParameter_t))
+#define UA_MEMSIZE_STATE (10 * sizeof(UATracker_t))
+#define UA_MAX_MEMORY (UA_MEMSIZE_PARAM + UA_MEMSIZE_STATE)
+
+
+
+/* Copies the input string to output with proper encoding.
+ * Allows for populating substrings (i.e. ranges of memory) in existing string buffers.
+ */
+int encodeURIComponent(char input[], char output[], int input_len, int add_null){
+  int i, j = 0;
+  char** cur = & output;
+  static char hex[] = "0123456789abcdef";
+  for(i = 0; i < input_len; i++){
+    if(isalnum(input[i]) || input[i] == '-' || input[i] == '.' || input[i] == '~'){
+      output[j++] = input[i];
+    } else if(input[i] == ' '){
+      output[j++] = '+';
+    } else {
+      output[j++] = '%';
+      output[j++] = hex[ (int) (input[i] >> 4) & 15];
+      output[j++] = hex[ (int) (input[i] & 15) & 15];
+    }
   }
+
+  /* Null termination is optional, to permit sequential calls 
+   * of this method against multiple parameters into a single
+   * output string */
+  if(add_null) 
+    output[j++] = '\0';
+  
+  return j; /* result length */
 }
 
-char* getParameterName(UAState_t* state, trackingField_t field, int slot_id){
-  char* temp = malloc(6);
-  int position = getParameterIndex(field, slot_id);
-  switch(field){
-    case UA_CUSTOM_METRIC:
-      sprintf(temp, "cm%d", slot_id); break;
-    case UA_CUSTOM_DIMENSION:
-      sprintf(temp, "cd%d", slot_id); break;
-    default:
-      strcpy(temp, state->parameter_map[ position ]);
-      break;
-  }
-  return temp;
+/* Define tracking type strings */
+inline int populateTypeNames(char* types[]){
+  types[UA_PAGEVIEW] = "pageview";
+  types[UA_APPVIEW] = "appview";
+  types[UA_EVENT] = "event";
+  types[UA_TRANSACTION] = "trans";
+  types[UA_TRANSACTION_ITEM] = "item";
+  types[UA_TIMING] = "timing";
+  types[UA_SOCIAL] = "social";
+  types[UA_EXCEPTION] = "exception";
+  return UA_MAX_TYPES;
 }
 
-char* customFieldParameter(char* template, int index){
-  char* temp = malloc(6);
-  sprintf(temp, template, index);
-  return temp;
-}
 
-/* List of parameter names corresponding to our field indexes */
-void buildParameterMap(char* params[]){
+
+/* List of parameter names (strings) corresponding to our field indexes */
+inline void populateParameterNames(char* params[], char* custom_params){
+  int i, j;
+  char* cur;
   params[UA_TRACKING_ID] = "tid";
   params[UA_CLIENT_ID] = "cid";
   params[UA_USER_ID] = "uid";
@@ -95,281 +116,224 @@ void buildParameterMap(char* params[]){
   params[UA_TIMING_TCP_CONNECT] = "tcp";
   params[UA_TIMING_SERVER_RESPONSE] = "srt";
   params[UA_VERSION_NUMBER] = "v";
-}
-
-UAParameter_t* getParameterNode(UAState_t* state, trackingField_t field, int slot_id){
-  int index = getParameterIndex(field, slot_id);
-  return & state->parameters[ index ];
-}
-
-
-UAState_t* setPermanentState(UAState_t* state, trackingField_t field, int slot_id, char* value){
-  while(NULL != state->parent){
-    state = state->parent; // find root
-  }
-  
-  char* param_name = getParameterName(state, field, slot_id);
-  UAParameter_t* param = getParameterNode(state, field, slot_id);
-
-  param->slot_id = slot_id;
-  param->name = param_name;
-  param->field = field;
-  param->value = value;
-  return state;
-}
-
-UAState_t* setTentativeState(UAState_t* state, trackingField_t field, int slot_id, char* value){
-  UAState_t* temp;
-  int depth = 0;
-  char* param_name = getParameterName(state, field, slot_id);
-  UAParameter_t* param;
-
-  while(NULL != state->child){
-    state = state->child; // find most recent state
-    depth++;
-  }
-  
-  if(NULL == state->parent){ // add a state layer
-
-    temp = malloc(sizeof(UAState_t));
-    temp->parent = state;
-    temp->child = state->child;
-    if(NULL != temp->child){
-      temp->child->parent = temp;
-    }
-    state->child = temp;
-    
-    memcpy(& temp->parameter_map, & state->parameter_map, UA_MAX_PARAMETERS * sizeof(char*));
-    memcpy(& temp->trackingtype_map, & state->trackingtype_map, UA_MAX_TYPES * sizeof(char*));
-    state = temp;
-  }
-
-  // by now "state" is the top (latest) of the stack
-  param = getParameterNode(state, field, slot_id);
-  param->slot_id = slot_id;
-  param->name = param_name;
-  param->field = field;
-  param->value = value;
-  return state;
-}
-
-
-UAState_t* setTrackingOptions(UAState_t* state, UAOptions_t* opts){
-  int i, c = 0;
-  UAState_t* temp;
-  for(i = 0; i < UA_MAX_PARAMETERS; i++){
-    if(NULL != opts->options[i].value){
-      temp = setPermanentState(state, opts->options[i].field, opts->options[i].slot_id, opts->options[i].value);
-      c++;
-    }
-  }
-  return temp;
-}
-
-UAState_t* setTranscientTrackingOptions(UAState_t* state, UAOptions_t* opts){
-  int i, c = 0;
-  UAState_t* temp = state;
-
-  if(NULL == opts)
-    return state;
-
-  for(i = 0; i < UA_MAX_PARAMETERS; i++){
-    if(NULL != opts->options[i].value){
-      temp = setTentativeState(state, opts->options[i].field, opts->options[i].slot_id, opts->options[i].value);
-      c++;
-    }
-  }
-  return temp;
-}
-
-
-UAState_t* removeTentativeState(UAState_t* state){
-  int i;
-  UAState_t* parent = state->parent;
-
-  
-  if(NULL != parent){ /* Unlink this state */
-    parent->child = state->child;
-    if(NULL != parent->child){
-      parent->child->parent = parent;
-    }
-    state->parent = NULL;
-    state->child = NULL;
-  }
-
-  for(i = 0; i < UA_MAX_PARAMETERS; i++){
-    if(NULL != state->parameters[i].name){
-      memset(& state->parameters[i], 0, sizeof(UAParameter_t));
-    }
-  }
-
-  memset(state, 0, sizeof(UAState_t));
-  free(state);
-  return parent;
-}
-
-inline int prepareTrackingTypeMap(char* types[]){
-  types[UA_PAGEVIEW] = "pageview";
-  types[UA_APPVIEW] = "appview";
-  types[UA_EVENT] = "event";
-  types[UA_TRANSACTION] = "trans";
-  types[UA_TRANSACTION_ITEM] = "item";
-  types[UA_TIMING] = "timing";
-  types[UA_SOCIAL] = "social";
-  types[UA_EXCEPTION] = "exception";
-  return UA_MAX_TYPES;
-}
-
-UAState_t* createTracker(char* trackingId, char* clientId, char* userId){
-  UAState_t* temp;
-  temp = malloc(sizeof(UAState_t));
-  temp->parent = NULL;
-  temp->child = NULL;
-
-  memset(& temp->parameters, 0, sizeof(UAParameter_t) * UA_MAX_PARAMETERS);
-
-  buildParameterMap(temp->parameter_map);
-  prepareTrackingTypeMap(temp->trackingtype_map);
-  
-  setPermanentState(temp, UA_VERSION_NUMBER, 0, "1");
-  setPermanentState(temp, UA_TRACKING_ID, 0, trackingId);
-  setPermanentState(temp, UA_CLIENT_ID, 0, clientId);
-  setPermanentState(temp, UA_USER_ID, 0, userId);
-
-  return temp;
-}
-
-
-void removeTracker(UAState_t* state){
-  UAState_t* temp = state;
-  while(NULL != temp){
-    temp = removeTentativeState(temp);
-  }
-}
-
-UAParameter_t* getCurrentParam(UAState_t* state, int index){
-  UAState_t* child = state;
-  UAParameter_t* param;
-  while(NULL != child->child){ // find the tail
-    child = child->child;
-  }
-  while(NULL != child){ // iterate up to head.
-    param = & child->parameters[index];
-    if(NULL != param->name){
-      return param;
-    }
-    child = child->parent;
-  }
-  return NULL;
-}
-
-
-int iterateStateProperties(UAState_t* state, int (*callback)(UAParameter_t*, void*), void* data){
-  int i, j = 0;
-  UAState_t* child = state;
-  UAParameter_t* param;
-
-  while(NULL != child->child){ 
-    child = child->child; /* find last state */
-  }
-
-
-  for(i = 0; i < UA_MAX_FIELD_INDEX; i++){
-    param = getCurrentParam(state, i);
-    if(NULL != param){
-      if(0 == callback(param, data)){
-        j++;
-      }
-    }
-  }
-
+ 
+  /* Populate dimension space */
   for(i = 0; i < UA_MAX_CUSTOM_DIMENSION; i++){
-    param = getCurrentParam(state, getParameterIndex(UA_CUSTOM_DIMENSION, i));
-    if(NULL != param){
-      if(0 == callback(param, data)){
-        j++;
-      }
-    }
+    cur = (char*) (custom_params + (i * UA_CUSTOM_PARAM_LEN));
+    sprintf(cur, "cd%d", i + 1);
+    params[ i + UA_START_CDIMENSIONS ] = cur; /* link parameter name */
   }
 
-  for(i = 0; i < UA_MAX_CUSTOM_METRIC; i++){
-    param = getCurrentParam(state, getParameterIndex(UA_CUSTOM_METRIC, i));
-    if(NULL != param){
-      if(0 == callback(param, data)){
-        j++;
-      }
-    }
+  /* Populate metric space */
+  for(j = 0; j < UA_MAX_CUSTOM_METRIC; j++){
+    cur = (char*) (custom_params + ((i + j) * UA_CUSTOM_PARAM_LEN));
+    sprintf(cur, "cm%d", j + 1);
+    params[ j + UA_START_CDIMENSIONS ] = cur; /* link parameter name */
   }
-
-
-  return j;
-}
-
-
-
-void freeParameterSet(UAParameter_t** params){
-  memset(params[ UA_TRACKING_TYPE ], 0, sizeof(UAParameter_t));
-  free(params[ UA_TRACKING_TYPE ]);
-  free(params);
-}
-
-int compileQueryString(UAParameter_t* param, void* query_pending){
-  UAQueryPending_t* query = (UAQueryPending_t*) query_pending;
-
-  if(NULL == param->name || NULL == param->value) return 1;
-
-  int offset = query->query_len;
-  int name_len = strlen(param->name);
-  int value_len = strlen(param->value);
-
-  char* basequery = query->querystring;
-  char* value_encoded = curl_easy_escape(query->curl, param->value, value_len);
   
-  if(0 != offset){
-    strncpy(basequery + offset, "&", 1);
-    offset++;
+}
+
+
+/* Retrieve a field name (pointer) by its ID 
+ * (and appropriate offset for custom parameters */
+inline char* getOptionName(char* field_names[], trackingField_t field, int slot_id){
+  switch(field){
+    case UA_CUSTOM_METRIC: 
+      return field_names[ UA_START_CMETRICS + slot_id - 1 ];
+    case UA_CUSTOM_DIMENSION:
+      return field_names[ UA_START_CDIMENSIONS + slot_id - 1 ];
+    default:
+      return field_names[ field ];
   }
+}
 
-  value_len = strlen(value_encoded);
+/* Retrieve the tracking-type parameter name (pointer) */
+inline char* getTrackingType(UATracker_t* tracker, trackingType_t type){
+  assert(NULL != tracker);
+  assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
 
-  strncpy(basequery + offset, param->name, name_len);
-  strncpy(basequery + offset + name_len, "=", 1);
-  strncpy(basequery + offset + name_len + 1, value_encoded, value_len);
+  return tracker->map_types[ type ];
+}
 
-  query->query_len = offset + name_len + value_len + 1;
+/* Void all memory allocated to tracking parameters (pointers) */
+inline void initParameterState(UAParameter_t params[], int howmany){
+  memset(params, 0, howmany * (sizeof(UAParameter_t)));
+}
 
-  curl_free(value_encoded);
-
-  return 0;
+/* Void a tracker's memory */
+void cleanTracker(UATracker_t* tracker){
+  assert(NULL != tracker);
+  if(NULL != tracker->curl){
+    curl_easy_cleanup(tracker->curl);
+  }
+  memset(tracker, 0, sizeof(UATracker_t)); 
 }
 
 
-UAQueryPending_t* prepareTrackingQuery(UAState_t* state, trackingType_t type){
-  int count;
+/* Clean out ephemeral state & query cache */
+inline void resetQuery(UATracker_t* tracker){
+  initParameterState(tracker->ephemeral_parameters, UA_MAX_PARAMETERS);
+  memset(tracker->query, 0, UA_MAX_QUERY_LEN);
+  tracker->query_len = 0;
+}
+
+
+
+
+
+
+/* Define a single parameter's name/value/slot */
+inline void setParameter(char* field_names[], UAParameter_t params[], trackingField_t field, int slot_id, char* value){
+  params[ field ].name = getOptionName(field_names, field, slot_id);
+  params[ field ].value = value;
+  params[ field ].slot_id = slot_id;
+}
+
+/* Populate several parameters (pointers) given a set of options */
+inline void setParameterList(char* field_names[], UAParameter_t params[], UAOptionNode_t options[], int howmany){
+  int i, field, slot_id;
+  for(i = 0; i < howmany; i++){
+    if(options[i].field < 1) continue;
+    field = options[i].field;
+    slot_id = options[i].slot_id;
+    params[ field ].field = field;
+    setParameter(field_names, params, field, slot_id, options[i].value);
+  }
+}
+
+
+/* Populate several lifetime/permanent or temporary/ephemeral values based on scope */
+inline void setOptionParameterList(UATracker_t* tracker, stateScopeFlag_t flag, UAOptionNode_t options[]){
+  assert(NULL != tracker);
+  assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
+  switch(flag){
+    case UA_PERMANENT: 
+      setParameterList(tracker->map_parameters, tracker->lifetime_parameters, options, UA_MAX_PARAMETERS);
+      break;
+    case UA_EPHEMERAL:
+      setParameterList(tracker->map_parameters, tracker->ephemeral_parameters, options, UA_MAX_PARAMETERS);
+      break;
+  }
+}
+
+
+/* Populate a single lifetime/permanent or temporary/ephemeral value based on scope */
+inline void setOptionParameter(UATracker_t* tracker, stateScopeFlag_t flag, trackingField_t field, int slot_id, char* value ){
+  assert(NULL != tracker);
+  assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
+  switch(flag){
+    case UA_PERMANENT: 
+      setParameter(tracker->map_parameters, tracker->lifetime_parameters, field, slot_id, value);
+      break;
+    case UA_EPHEMERAL:
+      setParameter(tracker->map_parameters, tracker->ephemeral_parameters, field, slot_id, value);
+      break;
+  }
+}
+
+/* Set up an already-allocated tracker
+ *  - Clear out the whole tracker space
+ *  - Populate parameter names
+ *  - Define lifetime tracker values
+ */
+void initTracker(UATracker_t* tracker, char* trackingId, char* clientId, char* userId){
+  assert(NULL != tracker);
+  cleanTracker(tracker);
   
-  UAQueryPending_t* query = malloc(sizeof(UAQueryPending_t));
-  memset(query, 0, sizeof(UAQueryPending_t));
+  (*tracker).__configured__ = UA_MEM_MAGIC_CONFIG;
 
-  query->curl = curl_easy_init();
+  populateTypeNames(tracker->map_types);
+  populateParameterNames(tracker->map_parameters, tracker->map_custom);
 
-  setTentativeState(state, UA_TRACKING_TYPE, 0, state->trackingtype_map[ type ]); 
-  count = iterateStateProperties(state, compileQueryString, query);
+  memset(& tracker->query, 0, UA_MAX_QUERY_LEN);
 
-  return query;
+  setParameter(tracker->map_parameters, tracker->lifetime_parameters, UA_VERSION_NUMBER, 0, "1");
+  setParameter(tracker->map_parameters, tracker->lifetime_parameters, UA_TRACKING_ID, 0, trackingId);
+  setParameter(tracker->map_parameters, tracker->lifetime_parameters, UA_CLIENT_ID, 0, clientId);
+  setParameter(tracker->map_parameters, tracker->lifetime_parameters, UA_USER_ID, 0, userId);
+
 }
 
-void freeTrackingQuery(UAQueryPending_t* query){
-  curl_easy_cleanup(query->curl);
-  memset(query, 0, sizeof(UAQueryPending_t));
-  free(query);
+/* Allocate space for a tracker & initialize it */
+UATracker_t* createTracker(char* trackingId, char* clientId, char* userId){
+  UATracker_t* new_tracker = malloc(sizeof(UATracker_t));
+  initTracker(new_tracker, trackingId, clientId, userId);
+  new_tracker->curl = curl_easy_init(); 
+  return new_tracker;
 }
 
+
+/* Clear and de-allocate a tracker */
+void removeTracker(UATracker_t* tracker){
+  assert(NULL != tracker);
+  cleanTracker(tracker);
+  free(tracker);
+}
+
+/* Wrapper: set up lifetime options on a tracker */
+void setTrackingOptions(UATracker_t* tracker, UAOptions_t* opts){
+  setOptionParameterList(tracker, UA_PERMANENT, opts->options);
+}
+
+/* Wrapper: set up a single lifetime option on a tracker */
+void setTrackingOption(UATracker_t* tracker, trackingField_t field, int slot_id, char* value){
+  setOptionParameter(tracker, UA_PERMANENT, field, slot_id, value);
+}
+
+/* Retrieve name and value for a given index (transcending ephemeral state to lifetime, if needed) */
+void getCurrentParameterValue(UATracker_t* tracker, int index, char** name, char** value){
+  assert(NULL != tracker);
+  
+  (*name) = tracker->ephemeral_parameters[ index ].name;
+  (*value) = tracker->ephemeral_parameters[ index ].value;
+  if(NULL == (*name) || NULL == (*value)){
+    (*name) = tracker->lifetime_parameters[ index ].name;
+    (*value) = tracker->lifetime_parameters[ index ].value;
+  }
+}
+
+/* Construct a query-string based on tracker state */
+int assembleQueryString(UATracker_t* tracker, char* query, int offset){
+  int i;
+  char* name;
+  char* value;
+  int name_len;
+  int value_len;
+
+  for(i = 0; i < UA_MAX_PARAMETERS; i++){
+    
+    getCurrentParameterValue(tracker, i, & name, & value);
+    if(NULL == name || NULL == value)  continue;
+
+    name_len = strlen(name);
+    value_len = strlen(value);
+
+    if(i > 0){
+      strncpy(query + offset, "&", 1);
+      offset++;
+    }
+
+    strncpy(query + offset, name, name_len);
+    strncpy(query + offset + name_len, "=", 1);
+
+    /* Fill in the encoded values */
+    value_len = encodeURIComponent(value, query + offset + name_len + 1, value_len, 0);
+    
+    offset += (name_len + value_len + 1);
+  }
+  return offset; 
+}
+
+/* Data handler for CURL to silence it's default output */
 size_t curl_null_data_handler(char *ptr, size_t size, size_t nmemb, void *userdata){
   return (nmemb * size);
 }
 
-
+/* Process a POST using CURL */
 int postQuery(CURL* curl, char* query){
+  assert(NULL != curl);
+  assert(NULL != query);
+
   CURLcode res;
   int result;
   curl_easy_setopt(curl, CURLOPT_URL, UA_ENDPOINT);
@@ -385,20 +349,38 @@ int postQuery(CURL* curl, char* query){
 }
 
 
+/* Assemble a query from a tracker and send it through CURL */
+void queueTracking(UATracker_t* tracker){
+  assert(NULL != tracker);
+  assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
 
-int sendTracking(UAState_t* state, trackingType_t type, UAOptions_t* opts){
-  
-  UAState_t* temp = setTranscientTrackingOptions(state, opts);
-  UAQueryPending_t* query = prepareTrackingQuery(temp, type);
+  int query_len;
+  char* query = tracker->query;
+  memset(query, 0, UA_MAX_QUERY_LEN);
+  query_len = assembleQueryString(tracker, query, 0);
+  postQuery(tracker->curl, query); 
 
-  printf("Query: %s\n", query->querystring);
-  postQuery(query->curl, query->querystring);
-
-  if(NULL != opts) removeTentativeState(temp);
-  freeTrackingQuery(query);
-
-  return 0;
 }
 
+/* Prepare ephemeral state on a tracker and dispatch its query */
+void sendTracking(UATracker_t* tracker, trackingType_t type, UAOptions_t* opts){
+  assert(NULL != tracker);
+  assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
+
+
+  if(NULL != opts){
+    setOptionParameterList(tracker, UA_EPHEMERAL, opts->options);
+  }
+
+  setOptionParameter(tracker, 
+      UA_EPHEMERAL, UA_TRACKING_TYPE, 0, 
+      getTrackingType(tracker, type)
+  );
+
+  queueTracking(tracker);
+  resetQuery(tracker); 
+
+  printf("Tracking sent\n");
+}
 
 
