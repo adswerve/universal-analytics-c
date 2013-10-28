@@ -6,10 +6,7 @@
 
 #define UA_MEM_MAGIC_UNSET 0xDEADC0DE
 #define UA_MEM_MAGIC_CONFIG 0xADDED00
-#define UA_MEMSIZE_PARAM (2 * UA_MAX_PARAMETERS * sizeof(UAParameter_t))
-#define UA_MEMSIZE_STATE (10 * sizeof(UATracker_t))
-#define UA_MAX_MEMORY (UA_MEMSIZE_PARAM + UA_MEMSIZE_STATE)
-
+#define UA_DEFAULT_OPTION_QUEUE 1
 
 
 /* Copies the input string to output with proper encoding.
@@ -39,6 +36,8 @@ int encodeURIComponent(char input[], char output[], int input_len, int add_null)
   
   return j; /* result length */
 }
+
+
 
 /* Define tracking type strings */
 inline int populateTypeNames(char* types[]){
@@ -128,7 +127,7 @@ inline void populateParameterNames(char* params[], char* custom_params){
   for(j = 0; j < UA_MAX_CUSTOM_METRIC; j++){
     cur = (char*) (custom_params + ((i + j) * UA_CUSTOM_PARAM_LEN));
     sprintf(cur, "cm%d", j + 1);
-    params[ j + UA_START_CDIMENSIONS ] = cur; /* link parameter name */
+    params[ j + UA_START_CMETRICS ] = cur; /* link parameter name */
   }
   
 }
@@ -147,6 +146,19 @@ inline char* getOptionName(char* field_names[], trackingField_t field, int slot_
   }
 }
 
+inline int getFieldPosition(trackingField_t field, int slot_id){
+  switch(field){
+    case UA_CUSTOM_METRIC:
+      return UA_START_CMETRICS + slot_id - 1;
+    case UA_CUSTOM_DIMENSION:
+      return UA_START_CDIMENSIONS + slot_id - 1;
+    default:
+      return field;
+  }
+}
+
+
+
 /* Retrieve the tracking-type parameter name (pointer) */
 inline char* getTrackingType(UATracker_t* tracker, trackingType_t type){
   assert(NULL != tracker);
@@ -163,9 +175,7 @@ inline void initParameterState(UAParameter_t params[], int howmany){
 /* Void a tracker's memory */
 void cleanTracker(UATracker_t* tracker){
   assert(NULL != tracker);
-  if(NULL != tracker->curl){
-    curl_easy_cleanup(tracker->curl);
-  }
+  HTTPcleanup(& tracker->queue);
   memset(tracker, 0, sizeof(UATracker_t)); 
 }
 
@@ -183,10 +193,14 @@ inline void resetQuery(UATracker_t* tracker){
 
 
 /* Define a single parameter's name/value/slot */
-inline void setParameter(char* field_names[], UAParameter_t params[], trackingField_t field, int slot_id, char* value){
-  params[ field ].name = getOptionName(field_names, field, slot_id);
-  params[ field ].value = value;
-  params[ field ].slot_id = slot_id;
+inline void setParameterCore(char* field_names[], UAParameter_t params[], trackingField_t field, int slot_id, char* value){
+  int position = getFieldPosition(field, slot_id);
+  char* name = getOptionName(field_names, field, slot_id);
+  assert(NULL != name);
+  params[ position ].field = field;
+  params[ position ].name = name;
+  params[ position ].value = value;
+  params[ position ].slot_id = slot_id;
 }
 
 /* Populate several parameters (pointers) given a set of options */
@@ -194,16 +208,13 @@ inline void setParameterList(char* field_names[], UAParameter_t params[], UAOpti
   int i, field, slot_id;
   for(i = 0; i < howmany; i++){
     if(options[i].field < 1) continue;
-    field = options[i].field;
-    slot_id = options[i].slot_id;
-    params[ field ].field = field;
-    setParameter(field_names, params, field, slot_id, options[i].value);
+    setParameterCore(field_names, params, options[i].field, options[i].slot_id, options[i].value);
   }
 }
 
 
 /* Populate several lifetime/permanent or temporary/ephemeral values based on scope */
-inline void setOptionParameterList(UATracker_t* tracker, stateScopeFlag_t flag, UAOptionNode_t options[]){
+inline void setParameterStateList(UATracker_t* tracker, stateScopeFlag_t flag, UAOptionNode_t options[]){
   assert(NULL != tracker);
   assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
   switch(flag){
@@ -218,18 +229,31 @@ inline void setOptionParameterList(UATracker_t* tracker, stateScopeFlag_t flag, 
 
 
 /* Populate a single lifetime/permanent or temporary/ephemeral value based on scope */
-inline void setOptionParameter(UATracker_t* tracker, stateScopeFlag_t flag, trackingField_t field, int slot_id, char* value ){
+inline void setParameterState(UATracker_t* tracker, stateScopeFlag_t flag, trackingField_t field, int slot_id, char* value ){
   assert(NULL != tracker);
   assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
   switch(flag){
     case UA_PERMANENT: 
-      setParameter(tracker->map_parameters, tracker->lifetime_parameters, field, slot_id, value);
+      setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, field, slot_id, value);
       break;
     case UA_EPHEMERAL:
-      setParameter(tracker->map_parameters, tracker->ephemeral_parameters, field, slot_id, value);
+      setParameterCore(tracker->map_parameters, tracker->ephemeral_parameters, field, slot_id, value);
       break;
   }
 }
+
+void setTrackerOption(UATracker_t* tracker, UATrackerOption_t option, int value){
+  assert(NULL != tracker);
+  assert(UA_MAX_TRACKER_OPTION > option);
+  assert(0 <= option);
+  tracker->options[ option ] = value;
+}
+
+int getTrackerOption(UATracker_t* tracker, UATrackerOption_t option){
+  assert(NULL != tracker);
+  return tracker->options[ option ];
+}
+
 
 /* Set up an already-allocated tracker
  *  - Clear out the whole tracker space
@@ -247,10 +271,14 @@ void initTracker(UATracker_t* tracker, char* trackingId, char* clientId, char* u
 
   memset(& tracker->query, 0, UA_MAX_QUERY_LEN);
 
-  setParameter(tracker->map_parameters, tracker->lifetime_parameters, UA_VERSION_NUMBER, 0, "1");
-  setParameter(tracker->map_parameters, tracker->lifetime_parameters, UA_TRACKING_ID, 0, trackingId);
-  setParameter(tracker->map_parameters, tracker->lifetime_parameters, UA_CLIENT_ID, 0, clientId);
-  setParameter(tracker->map_parameters, tracker->lifetime_parameters, UA_USER_ID, 0, userId);
+  HTTPsetup(& tracker->queue);
+
+  setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, UA_VERSION_NUMBER, 0, "1");
+  setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, UA_TRACKING_ID, 0, trackingId);
+  setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, UA_CLIENT_ID, 0, clientId);
+  setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, UA_USER_ID, 0, userId);
+
+  setTrackerOption(tracker, UA_OPTION_QUEUE, UA_DEFAULT_OPTION_QUEUE);
 
 }
 
@@ -258,7 +286,6 @@ void initTracker(UATracker_t* tracker, char* trackingId, char* clientId, char* u
 UATracker_t* createTracker(char* trackingId, char* clientId, char* userId){
   UATracker_t* new_tracker = malloc(sizeof(UATracker_t));
   initTracker(new_tracker, trackingId, clientId, userId);
-  new_tracker->curl = curl_easy_init(); 
   return new_tracker;
 }
 
@@ -271,13 +298,13 @@ void removeTracker(UATracker_t* tracker){
 }
 
 /* Wrapper: set up lifetime options on a tracker */
-void setTrackingOptions(UATracker_t* tracker, UAOptions_t* opts){
-  setOptionParameterList(tracker, UA_PERMANENT, opts->options);
+void setParameters(UATracker_t* tracker, UAOptions_t* opts){
+  setParameterStateList(tracker, UA_PERMANENT, opts->options);
 }
 
 /* Wrapper: set up a single lifetime option on a tracker */
-void setTrackingOption(UATracker_t* tracker, trackingField_t field, int slot_id, char* value){
-  setOptionParameter(tracker, UA_PERMANENT, field, slot_id, value);
+void setParameter(UATracker_t* tracker, trackingField_t field, int slot_id, char* value){
+  setParameterState(tracker, UA_PERMANENT, field, slot_id, value);
 }
 
 /* Retrieve name and value for a given index (transcending ephemeral state to lifetime, if needed) */
@@ -324,30 +351,6 @@ int assembleQueryString(UATracker_t* tracker, char* query, int offset){
   return offset; 
 }
 
-/* Data handler for CURL to silence it's default output */
-size_t curl_null_data_handler(char *ptr, size_t size, size_t nmemb, void *userdata){
-  return (nmemb * size);
-}
-
-/* Process a POST using CURL */
-int postQuery(CURL* curl, char* query){
-  assert(NULL != curl);
-  assert(NULL != query);
-
-  CURLcode res;
-  int result;
-  curl_easy_setopt(curl, CURLOPT_URL, UA_ENDPOINT);
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, query);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_null_data_handler);
-  res = curl_easy_perform(curl);
-  if(res != CURLE_OK){
-    result = (int) res;
-  } else {
-    result = 0;
-  }
-  return result;
-}
-
 
 /* Assemble a query from a tracker and send it through CURL */
 void queueTracking(UATracker_t* tracker){
@@ -358,8 +361,7 @@ void queueTracking(UATracker_t* tracker){
   char* query = tracker->query;
   memset(query, 0, UA_MAX_QUERY_LEN);
   query_len = assembleQueryString(tracker, query, 0);
-  postQuery(tracker->curl, query); 
-
+  HTTPenqueue(& tracker->queue, UA_ENDPOINT, UA_USERAGENT, query, query_len); 
 }
 
 /* Prepare ephemeral state on a tracker and dispatch its query */
@@ -369,18 +371,23 @@ void sendTracking(UATracker_t* tracker, trackingType_t type, UAOptions_t* opts){
 
 
   if(NULL != opts){
-    setOptionParameterList(tracker, UA_EPHEMERAL, opts->options);
+    setParameterStateList(tracker, UA_EPHEMERAL, opts->options);
   }
 
-  setOptionParameter(tracker, 
+  setParameterState(tracker, 
       UA_EPHEMERAL, UA_TRACKING_TYPE, 0, 
       getTrackingType(tracker, type)
   );
 
   queueTracking(tracker);
+  
+  if(getTrackerOption(tracker, UA_OPTION_QUEUE) == 0){
+    HTTPflush(& tracker->queue);
+  }
+  
+  
   resetQuery(tracker); 
 
-  printf("Tracking sent\n");
 }
 
 

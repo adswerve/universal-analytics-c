@@ -1,9 +1,8 @@
 
-#include <stdlib.h>
-#include <curl/curl.h>
+#include "util/http.h"
 
 #define UA_ENDPOINT "https://www.google-analytics.com/collect"
-#define USER_AGENT_STRING "Analytics Pros - Universal Analytics for C"
+#define UA_USERAGENT "Analytics Pros - Universal Analytics for C"
 
 
 #define UA_MAX_TYPES 8
@@ -13,10 +12,9 @@
 #define UA_START_CDIMENSIONS 57 
 #define UA_START_CMETRICS 257 
 #define UA_MAX_PARAMETERS (UA_MAX_FIELD_INDEX + UA_MAX_CUSTOM_DIMENSION + UA_MAX_CUSTOM_METRIC)
-#define UA_MAX_QUERY_LEN 4096
-#define UA_STRING_STASH_LEN 2048
 #define UA_CUSTOM_PARAM_LEN 6
 #define UA_CUSTOM_PARAM_BUFFER ((UA_MAX_CUSTOM_DIMENSION + UA_MAX_CUSTOM_METRIC) * UA_CUSTOM_PARAM_LEN)
+#define UA_MAX_TRACKER_OPTION 1
 
 /* Tracking types 
  * These signify pageviews, events, transactions, etc.
@@ -116,18 +114,19 @@ typedef enum stateScopeFlag_t {
   UA_EPHEMERAL
 } stateScopeFlag_t;
 
-
-/* Callback types */
-typedef void* (*UAGenericCallback)(void*);
-typedef int (*UAEventCallback)(char*, void*);
-typedef int (*UAHTTPPOSTProcessor)(char*, char*, char*);
-typedef char* (*UAURLEncoder)(char*);
+/* Configuration flags */
+typedef enum UATrackerOption_t {
+  UA_OPTION_QUEUE
+} UATrackerOption_t;
 
 
 /* Tracker layout intended to maximize stack allocation and
  * minimize heap/dynamic allocation */
 typedef struct UATracker_t {
   int __configured__;
+
+  /* Configuration flags */
+  int options[ UA_MAX_TRACKER_OPTION ];
 
   /* State maps for the tracker's resulting parameter values */
   struct UAParameter_t lifetime_parameters[ UA_MAX_PARAMETERS ];
@@ -154,8 +153,8 @@ typedef struct UATracker_t {
   char query[ UA_MAX_QUERY_LEN ];
   int query_len;
   
-  /* Pointer for HTTP handler */
-  CURL* curl;
+  /* HTTP handler (from http.h) */
+  struct HTTPQueue_t queue; 
 
 } UATracker_t;
 
@@ -184,19 +183,28 @@ typedef UAOptions_t UAOptions;
 /* Creates Google Analytics tracker state objects */
 UATracker createTracker(char* trackingId, char* clientId, char* userId);
 
-void initTracker(UATracker, char* trackingId, char* clientId, char* userId);
+/* Initialize tracker state */
+void initTracker(UATracker tracker, char* trackingId, char* clientId, char* userId);
+
+/* Set flags to tune the funcionality of the tracker */
+void setTrackerOption(UATracker tracker, UATrackerOption_t option, int value);
 
 /* Stores option-values for the life of the tracker */
-void setTrackingOptions(UATracker state, UAOptions_t* opts);
+void setParameters(UATracker tracker, UAOptions_t* opts);
+
+/* Store a single option-value pair */
+void setParameter(UATracker tracker, trackingField_t type, int slot_id, char* value);
 
 /* Processes tracker state with a tracking type and ephemeral options
  * Dispatches resulting query to Google Analytics */
 void sendTracking(UATracker state, trackingType_t type, UAOptions_t* opts);
 
+/* Safely wipe tracker state without free() */
+void cleanTracker(UATracker);
+
 /* Clears tracker memory & free()s all allocated heap space */
 void removeTracker(UATracker);
 
-void cleanTracker(UATracker);
 
 
 int encodeURIComponent(char* input, char* output, int input_len, int add_null);
