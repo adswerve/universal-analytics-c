@@ -13,6 +13,8 @@
  * Allows for populating substrings (i.e. ranges of memory) in existing string buffers.
  */
 int encodeURIComponent(char input[], char output[], int input_len, int add_null){
+  assert(NULL != output); // avoid null-dereference
+  assert(NULL != input); // avoid null-dereference
   int i, j = 0;
   char** cur = & output;
   static char hex[] = "0123456789abcdef";
