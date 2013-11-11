@@ -1,4 +1,3 @@
-
 #include <assert.h>
 #include <string.h>
 
@@ -8,16 +7,26 @@
 #define UA_MEM_MAGIC_CONFIG 0xADDED00
 #define UA_DEFAULT_OPTION_QUEUE 1
 
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+
+static const char UA_ENDPOINT[] = "https://www.google-analytics.com/collect";
+static const char UA_USERAGENT[] = "Analytics Pros - Universal Analytics for C";
+static const char UA_PROTOCOL_VERSION[] = "1";
+
+/* Mapping for hexadecimal conversion */
+static const char _hexchar[] = "0123456789abcdef";
 
 /* Copies the input string to output with proper encoding.
  * Allows for populating substrings (i.e. ranges of memory) in existing string buffers.
  */
-int encodeURIComponent(char input[], char output[], int input_len, int add_null){
+static int encodeURIComponent(char input[], char output[], const unsigned int input_len, const UABoolean_t add_null){
   assert(NULL != output); // avoid null-dereference
   assert(NULL != input); // avoid null-dereference
   int i, j = 0;
   char** cur = & output;
-  static char hex[] = "0123456789abcdef";
   for(i = 0; i < input_len; i++){
     if(isalnum(input[i]) || input[i] == '-' || input[i] == '.' || input[i] == '~'){
       output[j++] = input[i];
@@ -25,23 +34,28 @@ int encodeURIComponent(char input[], char output[], int input_len, int add_null)
       output[j++] = '+';
     } else {
       output[j++] = '%';
-      output[j++] = hex[ (int) (input[i] >> 4) & 15];
-      output[j++] = hex[ (int) (input[i] & 15) & 15];
+      output[j++] = _hexchar[ (int) (input[i] >> 4) & 15];
+      output[j++] = _hexchar[ (int) (input[i] & 15) & 15];
     }
   }
 
   /* Null termination is optional, to permit sequential calls 
    * of this method against multiple parameters into a single
    * output string */
-  if(add_null) 
+  if(add_null == UA_TRUE) 
     output[j++] = '\0';
-  
-  return j; /* result length */
+ 
+  /* Because {j} is incremented as a position index through this process,
+   * it represents the length of the string at the end. It will be the last
+   * encoded character position +1. */
+  return j;
 }
 
 
 
-/* Define tracking type strings */
+/* Define tracking type strings; these are protocol-constants for
+ * Measurement Protocol v1. We may eventually migrate these to a separate 
+ * protocol module. */
 inline int populateTypeNames(char* types[]){
   types[UA_PAGEVIEW] = "pageview";
   types[UA_APPVIEW] = "appview";
@@ -56,8 +70,10 @@ inline int populateTypeNames(char* types[]){
 
 
 
-/* List of parameter names (strings) corresponding to our field indexes */
-inline void populateParameterNames(char* params[], char* custom_params){
+/* List of parameter names (strings) corresponding to our field indexes;
+ * these are also protocol-constants for Measurement Protocol v1.
+ * We may eventually migrate these to a separate protocol module. */
+inline void populateParameterNames(char* params[], const char* custom_params){
   int i, j;
   char* cur;
   params[UA_TRACKING_ID] = "tid";
@@ -137,7 +153,7 @@ inline void populateParameterNames(char* params[], char* custom_params){
 
 /* Retrieve a field name (pointer) by its ID 
  * (and appropriate offset for custom parameters */
-inline char* getOptionName(char* field_names[], trackingField_t field, int slot_id){
+inline char* getOptionName(char* field_names[], trackingField_t field, unsigned int slot_id){
   switch(field){
     case UA_CUSTOM_METRIC: 
       return field_names[ UA_START_CMETRICS + slot_id - 1 ];
@@ -148,7 +164,7 @@ inline char* getOptionName(char* field_names[], trackingField_t field, int slot_
   }
 }
 
-inline int getFieldPosition(trackingField_t field, int slot_id){
+inline int getFieldPosition(trackingField_t field, unsigned int slot_id){
   switch(field){
     case UA_CUSTOM_METRIC:
       return UA_START_CMETRICS + slot_id - 1;
@@ -170,7 +186,7 @@ inline char* getTrackingType(UATracker_t* tracker, trackingType_t type){
 }
 
 /* Void all memory allocated to tracking parameters (pointers) */
-inline void initParameterState(UAParameter_t params[], int howmany){
+inline void initParameterState(UAParameter_t params[], unsigned int howmany){
   memset(params, 0, howmany * (sizeof(UAParameter_t)));
 }
 
@@ -195,21 +211,24 @@ inline void resetQuery(UATracker_t* tracker){
 
 
 /* Define a single parameter's name/value/slot */
-inline void setParameterCore(char* field_names[], UAParameter_t params[], trackingField_t field, int slot_id, char* value){
+inline void setParameterCore(char* field_names[], UAParameter_t params[], trackingField_t field, unsigned int slot_id, const char* value){
   int position = getFieldPosition(field, slot_id);
   char* name = getOptionName(field_names, field, slot_id);
   assert(NULL != name);
   params[ position ].field = field;
   params[ position ].name = name;
-  params[ position ].value = value;
+  params[ position ].value = (char*) value;
   params[ position ].slot_id = slot_id;
 }
 
 /* Populate several parameters (pointers) given a set of options */
-inline void setParameterList(char* field_names[], UAParameter_t params[], UAOptionNode_t options[], int howmany){
+inline void setParameterList(char* field_names[], UAParameter_t params[], UAOptionNode_t options[], unsigned int howmany){
   int i, field, slot_id;
   for(i = 0; i < howmany; i++){
-    if(options[i].field < 1) continue;
+    if(options[i].field < 1){
+      /* Only populate legitimate fields... skip the bad ones (or NULL) */
+      continue;
+    }
     setParameterCore(field_names, params, options[i].field, options[i].slot_id, options[i].value);
   }
 }
@@ -231,7 +250,7 @@ inline void setParameterStateList(UATracker_t* tracker, stateScopeFlag_t flag, U
 
 
 /* Populate a single lifetime/permanent or temporary/ephemeral value based on scope */
-inline void setParameterState(UATracker_t* tracker, stateScopeFlag_t flag, trackingField_t field, int slot_id, char* value ){
+inline void setParameterState(UATracker_t* tracker, stateScopeFlag_t flag, trackingField_t field, unsigned int slot_id, char* value ){
   assert(NULL != tracker);
   assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
   switch(flag){
@@ -275,7 +294,7 @@ void initTracker(UATracker_t* tracker, char* trackingId, char* clientId, char* u
 
   HTTPsetup(& tracker->queue);
 
-  setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, UA_VERSION_NUMBER, 0, "1");
+  setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, UA_VERSION_NUMBER, 0, UA_PROTOCOL_VERSION);
   setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, UA_TRACKING_ID, 0, trackingId);
   setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, UA_CLIENT_ID, 0, clientId);
   setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, UA_USER_ID, 0, userId);
@@ -305,12 +324,12 @@ void setParameters(UATracker_t* tracker, UAOptions_t* opts){
 }
 
 /* Wrapper: set up a single lifetime option on a tracker */
-void setParameter(UATracker_t* tracker, trackingField_t field, int slot_id, char* value){
+void setParameter(UATracker_t* tracker, trackingField_t field, unsigned int slot_id, char* value){
   setParameterState(tracker, UA_PERMANENT, field, slot_id, value);
 }
 
 /* Retrieve name and value for a given index (transcending ephemeral state to lifetime, if needed) */
-void getCurrentParameterValue(UATracker_t* tracker, int index, char** name, char** value){
+void getCurrentParameterValue(UATracker_t* tracker, unsigned int index, char** name, char** value){
   assert(NULL != tracker);
   
   (*name) = tracker->ephemeral_parameters[ index ].name;
@@ -323,11 +342,11 @@ void getCurrentParameterValue(UATracker_t* tracker, int index, char** name, char
 
 /* Construct a query-string based on tracker state */
 int assembleQueryString(UATracker_t* tracker, char* query, int offset){
-  int i;
+  unsigned int i;
   char* name;
   char* value;
   int name_len;
-  int value_len;
+  unsigned int value_len;
 
   for(i = 0; i < UA_MAX_PARAMETERS; i++){
     
@@ -346,7 +365,7 @@ int assembleQueryString(UATracker_t* tracker, char* query, int offset){
     strncpy(query + offset + name_len, "=", 1);
 
     /* Fill in the encoded values */
-    value_len = encodeURIComponent(value, query + offset + name_len + 1, value_len, 0);
+    value_len = encodeURIComponent(value, (query + offset + name_len + 1), value_len, 0);
     
     offset += (name_len + value_len + 1);
   }
@@ -363,6 +382,11 @@ void queueTracking(UATracker_t* tracker){
   char* query = tracker->query;
   memset(query, 0, UA_MAX_QUERY_LEN);
   query_len = assembleQueryString(tracker, query, 0);
+
+  if(DEBUG){
+    printf(">>> Tracking: %s\n", query);
+  }
+
   HTTPenqueue(& tracker->queue, UA_ENDPOINT, UA_USERAGENT, query, query_len); 
 }
 

@@ -1,10 +1,11 @@
 
+#ifndef HTTP_H
+#define HTTP_H 1
 #include "util/http.h"
+#endif /* HTTP_H */
 
-#define UA_ENDPOINT "https://www.google-analytics.com/collect"
-#define UA_USERAGENT "Analytics Pros - Universal Analytics for C"
-
-
+/* These definitions are primarily for planning memory allocation and loop sentinels;
+ * eventually they'll be converted to enums... */
 #define UA_MAX_TYPES 8
 #define UA_MAX_FIELD_INDEX 57
 #define UA_MAX_CUSTOM_DIMENSION 200
@@ -16,13 +17,21 @@
 #define UA_CUSTOM_PARAM_BUFFER ((UA_MAX_CUSTOM_DIMENSION + UA_MAX_CUSTOM_METRIC) * UA_CUSTOM_PARAM_LEN)
 #define UA_MAX_TRACKER_OPTION 1
 
+
+/* Boolean aliases for precise evaluation */
+typedef enum boolean {
+  UA_FALSE = 0,
+  UA_TRUE = 1
+} UABoolean_t;
+
+
 /* Tracking types 
  * These signify pageviews, events, transactions, etc.
  * Some behaviors (e.g. required parameters) may be altered by
  * this option (in future versions).
  */
 typedef enum trackingType {
-  UA_PAGEVIEW,
+  UA_PAGEVIEW = 0,
   UA_APPVIEW,
   UA_EVENT,
   UA_TRANSACTION,
@@ -103,7 +112,7 @@ typedef enum trackingField {
 /* Name/Value pair with slot ID for URL composition */
 typedef struct UAParameter_t {
   trackingField_t field;
-  int slot_id;
+  unsigned int slot_id;
   char* name;
   char* value;
 } UAParameter_t;
@@ -162,7 +171,7 @@ typedef struct UATracker_t {
 /* Field/Value pairs with slot ID for convenient static specification */
 typedef struct UAOptionNode_t {
   trackingField_t field; 
-  int slot_id;
+  unsigned int slot_id;
   char* value;
 } UAOptionNode_t;
 
@@ -193,7 +202,7 @@ void setTrackerOption(UATracker tracker, UATrackerOption_t option, int value);
 void setParameters(UATracker tracker, UAOptions_t* opts);
 
 /* Store a single option-value pair */
-void setParameter(UATracker tracker, trackingField_t type, int slot_id, char* value);
+void setParameter(UATracker tracker, trackingField_t type, unsigned int slot_id, char* value);
 
 /* Processes tracker state with a tracking type and ephemeral options
  * Dispatches resulting query to Google Analytics */
@@ -204,10 +213,6 @@ void cleanTracker(UATracker);
 
 /* Clears tracker memory & free()s all allocated heap space */
 void removeTracker(UATracker);
-
-
-
-int encodeURIComponent(char* input, char* output, int input_len, int add_null);
 
 
 
