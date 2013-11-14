@@ -33,7 +33,7 @@ typedef struct HTTPQueue_t {
 
   CURLM* handler;
 
-  int count;
+  unsigned int count;
   CURL* requests[ UA_MAX_QUERY_QUEUE ];
 
 } HTTPQueue_t;
@@ -43,6 +43,6 @@ void HTTPcleanup(HTTPQueue_t* queue);
 void HTTPsetup(HTTPQueue_t* queue);
 
 
-int HTTPenqueue(HTTPQueue_t* queue, const char* endpoint, const char* useragent, const char* query, int query_len);
+int HTTPenqueue(HTTPQueue_t* queue, const char* endpoint, const char* useragent, const char* query, unsigned int query_len);
 
 

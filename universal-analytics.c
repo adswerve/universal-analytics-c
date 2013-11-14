@@ -202,7 +202,7 @@ inline void initParameterState(UAParameter_t params[], unsigned int howmany){
 /* Void a tracker's memory */
 void cleanTracker(UATracker_t* tracker){
   assert(NULL != tracker);
-  HTTPcleanup(& tracker->queue);
+  HTTPcleanup(& tracker->queue); // run any queued requests...
   memset(tracker, 0, sizeof(UATracker_t)); 
 }
 
@@ -350,7 +350,7 @@ void getCurrentParameterValue(UATracker_t* tracker, unsigned int index, char** n
 }
 
 /* Construct a query-string based on tracker state */
-int assembleQueryString(UATracker_t* tracker, char* query, int offset){
+unsigned int assembleQueryString(UATracker_t* tracker, char* query, unsigned int offset){
   unsigned int i;
   char* name;
   char* value;
@@ -387,7 +387,7 @@ void queueTracking(UATracker_t* tracker){
   assert(NULL != tracker);
   assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
 
-  int query_len;
+  unsigned int query_len;
   char* query = tracker->query;
   memset(query, 0, UA_MAX_QUERY_LEN);
   query_len = assembleQueryString(tracker, query, 0);
