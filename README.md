@@ -2,9 +2,6 @@
 
 This library provides a C interface for the Universal Analytics Measurement Protocol.
 
-Due to the constraints of the C language, this library's interface that differs slightly from Google's `analytics.js` implementation. In particular, `enum` constants are used to specify parameter fields, rather than strings (i.e. by parameter name). This offers some measurable efficiencies, while remaining quite readable (in our opinion).
-
-
 **NOTE** this project is reasonably feature-complete for most use-cases, covering all relevant features of the Measurement Protocol, however we still consider it _beta_. Please feel free to file issues for feature requests.
 
 # Contact
@@ -15,6 +12,8 @@ Email: `opensource@analyticspros.com`
 For the most accurate data in your reports, Analytics Pros recommends establishing a distinct ID for each of your users, and integrating that ID on your front-end web tracking, as well as tracking calls from other platforms (where this C library would run). This provides for a consistent, correct representation of user engagement, without skewing overall visit metrics (and others).
 
 Please see the [test.c](./test.c) file for an example; we'll be building out additional examples of all available tracking within it. (Currently it only highlights Pageview and Event tracking, but the remaining types should be fairly intuitive extensions.)
+
+Due to the constraints of the C language, this library's interface that differs slightly from Google's `analytics.js` implementation. In particular, `enum` constants are used to specify parameter fields, rather than strings (i.e. by parameter name). This offers some measurable efficiencies, while remaining quite readable (in our opinion).
 
 
 # Features not implemented
