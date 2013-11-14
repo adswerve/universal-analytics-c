@@ -1,3 +1,12 @@
+/******************************************************************************
+* Universal Analytics for C 
+* Copyright (c) 2013, Analytics Pros
+* 
+* This project is free software, distributed under the BSD license. 
+* Analytics Pros offers consulting and integration services if your firm needs 
+* assistance in strategy, implementation, or auditing existing work.
+******************************************************************************/
+
 #include "http.h"
 #include <assert.h>
 #include <string.h>
@@ -5,9 +14,10 @@
 #define DEBUG_PRINT_CURL_QUERY 0
 #define DEBUG_CURL_VERBOSE 0
 
-/* This module abstracts CURL from the rest of our tracking code.
- * Future versions will likely replace CURL with another HTTP client
- * for easier static build support. */
+/* This module provides an abstraction over CURL's HTTP methods,
+ * in hope of decoupling HTTP processing from the rest of our tracking
+ * logic, possibly supporting alternative HTTP libraries in the future.
+ */
 
 
 /* Data handler for CURL to silence it's default output */

@@ -1,3 +1,12 @@
+/******************************************************************************
+* Universal Analytics for C 
+* Copyright (c) 2013, Analytics Pros
+* 
+* This project is free software, distributed under the BSD license. 
+* Analytics Pros offers consulting and integration services if your firm needs 
+* assistance in strategy, implementation, or auditing existing work.
+******************************************************************************/
+
 #include <assert.h>
 #include <string.h>
 

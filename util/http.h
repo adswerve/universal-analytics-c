@@ -1,3 +1,19 @@
+/******************************************************************************
+* Universal Analytics for C 
+* Copyright (c) 2013, Analytics Pros
+* 
+* This project is free software, distributed under the BSD license. 
+* Analytics Pros offers consulting and integration services if your firm needs 
+* assistance in strategy, implementation, or auditing existing work.
+******************************************************************************/
+
+/* This module provides an abstraction over CURL for HTTP handling.
+ * Currently we rely on CURL to process HTTP requests to Google's servers,
+ * however its dependencies may not be practical to support in some systems,
+ * so this abstraction will hopefully make it simpler to support alternative
+ * HTTP libraries in the future. */
+
+
 #include <stdlib.h>
 #include <curl/curl.h>
 
