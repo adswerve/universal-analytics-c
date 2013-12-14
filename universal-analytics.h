@@ -127,13 +127,13 @@ typedef struct UAParameter_t {
 
 /* Flag to specify which level of tracker state to update */
 typedef enum stateScopeFlag_t {
-  UA_PERMANENT,
-  UA_EPHEMERAL
+  UA_PERMANENT = 0,
+  UA_EPHEMERAL = 1
 } stateScopeFlag_t;
 
 /* Configuration flags */
 typedef enum UATrackerOption_t {
-  UA_OPTION_QUEUE
+  UA_OPTION_QUEUE = 0
 } UATrackerOption_t;
 
 

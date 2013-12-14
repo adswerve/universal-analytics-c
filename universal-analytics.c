@@ -7,6 +7,7 @@
 * assistance in strategy, implementation, or auditing existing work.
 ******************************************************************************/
 
+#include <ctype.h>
 #include <assert.h>
 #include <string.h>
 
@@ -65,7 +66,7 @@ static int encodeURIComponent(char input[], char output[], const unsigned int in
 /* Define tracking type strings; these are protocol-constants for
  * Measurement Protocol v1. We may eventually migrate these to a separate 
  * protocol module. */
-inline int populateTypeNames(char* types[]){
+static inline int populateTypeNames(char* types[]){
   types[UA_PAGEVIEW] = "pageview";
   types[UA_APPVIEW] = "appview";
   types[UA_EVENT] = "event";
@@ -82,7 +83,7 @@ inline int populateTypeNames(char* types[]){
 /* List of parameter names (strings) corresponding to our field indexes;
  * these are also protocol-constants for Measurement Protocol v1.
  * We may eventually migrate these to a separate protocol module. */
-inline void populateParameterNames(char* params[], const char* custom_params){
+static inline void populateParameterNames(char* params[], const char* custom_params){
   int i, j;
   char* cur;
   params[UA_TRACKING_ID] = "tid";
@@ -162,7 +163,7 @@ inline void populateParameterNames(char* params[], const char* custom_params){
 
 /* Retrieve a field name (pointer) by its ID 
  * (and appropriate offset for custom parameters */
-inline char* getOptionName(char* field_names[], trackingField_t field, unsigned int slot_id){
+static inline char* getOptionName(char* field_names[], trackingField_t field, unsigned int slot_id){
   switch(field){
     case UA_CUSTOM_METRIC: 
       return field_names[ UA_START_CMETRICS + slot_id - 1 ];
@@ -173,7 +174,7 @@ inline char* getOptionName(char* field_names[], trackingField_t field, unsigned 
   }
 }
 
-inline int getFieldPosition(trackingField_t field, unsigned int slot_id){
+static inline int getFieldPosition(trackingField_t field, unsigned int slot_id){
   switch(field){
     case UA_CUSTOM_METRIC:
       return UA_START_CMETRICS + slot_id - 1;
@@ -187,7 +188,7 @@ inline int getFieldPosition(trackingField_t field, unsigned int slot_id){
 
 
 /* Retrieve the tracking-type parameter name (pointer) */
-inline char* getTrackingType(UATracker_t* tracker, trackingType_t type){
+static inline char* getTrackingType(UATracker_t* tracker, trackingType_t type){
   assert(NULL != tracker);
   assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
 
@@ -195,7 +196,7 @@ inline char* getTrackingType(UATracker_t* tracker, trackingType_t type){
 }
 
 /* Void all memory allocated to tracking parameters (pointers) */
-inline void initParameterState(UAParameter_t params[], unsigned int howmany){
+static inline void initParameterState(UAParameter_t params[], unsigned int howmany){
   memset(params, 0, howmany * (sizeof(UAParameter_t)));
 }
 
@@ -208,7 +209,7 @@ void cleanTracker(UATracker_t* tracker){
 
 
 /* Clean out ephemeral state & query cache */
-inline void resetQuery(UATracker_t* tracker){
+static inline void resetQuery(UATracker_t* tracker){
   initParameterState(tracker->ephemeral_parameters, UA_MAX_PARAMETERS);
   memset(tracker->query, 0, UA_MAX_QUERY_LEN);
   tracker->query_len = 0;
@@ -220,7 +221,7 @@ inline void resetQuery(UATracker_t* tracker){
 
 
 /* Define a single parameter's name/value/slot */
-inline void setParameterCore(char* field_names[], UAParameter_t params[], trackingField_t field, unsigned int slot_id, const char* value){
+static inline void setParameterCore(char* field_names[], UAParameter_t params[], trackingField_t field, unsigned int slot_id, const char* value){
   int position = getFieldPosition(field, slot_id);
   char* name = getOptionName(field_names, field, slot_id);
   assert(NULL != name);
@@ -231,7 +232,7 @@ inline void setParameterCore(char* field_names[], UAParameter_t params[], tracki
 }
 
 /* Populate several parameters (pointers) given a set of options */
-inline void setParameterList(char* field_names[], UAParameter_t params[], UAOptionNode_t options[], unsigned int howmany){
+static inline void setParameterList(char* field_names[], UAParameter_t params[], UAOptionNode_t options[], unsigned int howmany){
   int i, field, slot_id;
   for(i = 0; i < howmany; i++){
     if(options[i].field < 1){
@@ -244,7 +245,7 @@ inline void setParameterList(char* field_names[], UAParameter_t params[], UAOpti
 
 
 /* Populate several lifetime/permanent or temporary/ephemeral values based on scope */
-inline void setParameterStateList(UATracker_t* tracker, stateScopeFlag_t flag, UAOptionNode_t options[]){
+static inline void setParameterStateList(UATracker_t* tracker, stateScopeFlag_t flag, UAOptionNode_t options[]){
   assert(NULL != tracker);
   assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
   switch(flag){
@@ -259,7 +260,7 @@ inline void setParameterStateList(UATracker_t* tracker, stateScopeFlag_t flag, U
 
 
 /* Populate a single lifetime/permanent or temporary/ephemeral value based on scope */
-inline void setParameterState(UATracker_t* tracker, stateScopeFlag_t flag, trackingField_t field, unsigned int slot_id, char* value ){
+static inline void setParameterState(UATracker_t* tracker, stateScopeFlag_t flag, trackingField_t field, unsigned int slot_id, char* value ){
   assert(NULL != tracker);
   assert((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG);
   switch(flag){
@@ -274,7 +275,7 @@ inline void setParameterState(UATracker_t* tracker, stateScopeFlag_t flag, track
 
 void setTrackerOption(UATracker_t* tracker, UATrackerOption_t option, int value){
   assert(NULL != tracker);
-  assert(UA_MAX_TRACKER_OPTION > option);
+  assert(UA_MAX_TRACKER_OPTION > (int) option);
   assert(0 <= option);
   tracker->options[ option ] = value;
 }
