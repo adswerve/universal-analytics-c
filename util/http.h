@@ -13,6 +13,9 @@
  * so this abstraction will hopefully make it simpler to support alternative
  * HTTP libraries in the future. */
 
+/* Header guard, prevent multiple definition */
+#ifndef HTTP_H
+#define HTTP_H 1
 
 #include <stdlib.h>
 #include <curl/curl.h>
@@ -46,4 +49,4 @@ void HTTPflush(HTTPQueue_t* queue);
 
 int HTTPenqueue(HTTPQueue_t* queue, const char* endpoint, const char* useragent, const char* query, unsigned int query_len);
 
-
+#endif /* HTTP_H */

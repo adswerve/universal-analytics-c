@@ -7,10 +7,11 @@
 * assistance in strategy, implementation, or auditing existing work.
 ******************************************************************************/
 
-#ifndef HTTP_H
-#define HTTP_H 1
+/* Header guard, prevent multiple definition */
+#ifndef UNIVERSALANALYTICS_HEADER_GUARD
+#define UNIVERSALANALYTICS_HEADER_GUARD 1
+
 #include "util/http.h"
-#endif /* HTTP_H */
 
 /* These definitions are primarily for planning memory allocation and loop sentinels;
  * eventually they'll be converted to enums... */
@@ -224,3 +225,4 @@ void removeTracker(UATracker);
 
 
 
+#endif /* UNIVERSALANALYTICS_HEADER_GUARD */
