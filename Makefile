@@ -1,7 +1,8 @@
 DEBUG ?= 0
 DEBUG_FLAGS=-ggdb -D DEBUG=$(DEBUG)
-#COMPILE_FLAGS=-O3
+COMPILE_FLAGS=-Wall -stdlib=libstdc++
 DEPEND_FLAGS=-l curl
+# OPTIMIZE_FLAGS=-O3
 
 .PHONY: all clean test
 
@@ -13,7 +14,7 @@ clean:
 	@rm -fv testing.exe universal-analytics.o util/http.o
 
 testing.exe: test.c universal-analytics.o util/http.o 
-	gcc $(COMPILE_FLAGS) $(DEBUG_FLAGS) $(DEPEND_FLAGS) -o $@ $^
+	gcc $(COMPILE_FLAGS) $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) $(DEPEND_FLAGS) -o $@ $^
 
 
 util/http.o: util/http.c util/http.h
