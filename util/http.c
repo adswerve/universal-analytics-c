@@ -35,20 +35,25 @@ size_t curl_null_data_handler(char *ptr, size_t size, size_t nmemb, void *userda
   return (nmemb * size);
 }
 
+static inline unsigned int _minimum(unsigned int a, unsigned int b){
+  return (b < a) ? b : a;
+}
+
 
 /* Sequentially de-queue requests */
 int curl_multi_unload(CURLM* handler, CURL* requests[], unsigned int total){
-  int i, count = total;
+  int count = _minimum(UA_MAX_QUERY_QUEUE, total);
+  int i = count;
 
   if(DEBUG){
-    printf("Processing %d requests...\n", total);
+    printf("Processing %d requests...\n", count);
   }
 
   while(count){
     curl_multi_perform(handler, & count);
   }
 
-  for(i = 0; i < total; i++){
+  while(i--){
     curl_easy_cleanup(requests[ i ]);
     requests[ i ] = NULL;
   }
@@ -61,7 +66,6 @@ int curl_multi_unload(CURLM* handler, CURL* requests[], unsigned int total){
  *  - Trigger CURL's native cleanup (free()) on its resources
  */
 void HTTPcleanup(HTTPQueue_t* queue){
-  int i;
   if(NULL != queue->handler){
     curl_multi_unload(queue->handler, queue->requests, queue->count);
     curl_multi_cleanup(queue->handler);
@@ -97,8 +101,6 @@ int HTTPenqueue(HTTPQueue_t* queue, const char* endpoint, const char* useragent,
 
   CURLM* handler = queue->handler;
   CURL* curl = curl_easy_init();
-  CURLcode res;
-
 
   if(DEBUG_PRINT_CURL_QUERY)
     printf("Queueing: \n\t- %s\n\t- %s\n\t- %s\n", endpoint, useragent, query);

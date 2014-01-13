@@ -36,7 +36,6 @@ static int encodeURIComponent(char input[], char output[], const unsigned int in
   assert(NULL != output); // avoid null-dereference
   assert(NULL != input); // avoid null-dereference
   int i, j = 0;
-  char** cur = & output;
   for(i = 0; i < input_len; i++){
     if(isalnum(input[i]) || input[i] == '-' || input[i] == '.' || input[i] == '~'){
       output[j++] = input[i];
@@ -203,7 +202,9 @@ static inline void initParameterState(UAParameter_t params[], unsigned int howma
 /* Void a tracker's memory */
 void cleanTracker(UATracker_t* tracker){
   assert(NULL != tracker);
-  HTTPcleanup(& tracker->queue); // run any queued requests...
+  if((*tracker).__configured__ == UA_MEM_MAGIC_CONFIG){
+    HTTPcleanup(& tracker->queue); // run any queued requests...
+  }
   memset(tracker, 0, sizeof(UATracker_t)); 
 }
 
@@ -233,7 +234,7 @@ static inline void setParameterCore(char* field_names[], UAParameter_t params[],
 
 /* Populate several parameters (pointers) given a set of options */
 static inline void setParameterList(char* field_names[], UAParameter_t params[], UAOptionNode_t options[], unsigned int howmany){
-  int i, field, slot_id;
+  int i;
   for(i = 0; i < howmany; i++){
     if(options[i].field < 1){
       /* Only populate legitimate fields... skip the bad ones (or NULL) */
@@ -392,10 +393,6 @@ void queueTracking(UATracker_t* tracker){
   char* query = tracker->query;
   memset(query, 0, UA_MAX_QUERY_LEN);
   query_len = assembleQueryString(tracker, query, 0);
-
-  if(DEBUG){
-    printf(">>> Tracking: %s\n", query);
-  }
 
   HTTPenqueue(& tracker->queue, UA_ENDPOINT, UA_USERAGENT, query, query_len); 
 }

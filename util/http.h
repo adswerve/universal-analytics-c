@@ -34,9 +34,8 @@ typedef char* (*UAURLEncoder)(char*);
 
 typedef struct HTTPQueue_t {
 
-  CURLM* handler;
-
   unsigned int count;
+  CURLM* handler;
   CURL* requests[ UA_MAX_QUERY_QUEUE ];
 
 } HTTPQueue_t;
