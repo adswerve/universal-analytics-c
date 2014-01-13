@@ -12,8 +12,12 @@ test: testing.exe
 
 clean:
 	@rm -fv testing.exe universal-analytics.o util/http.o
+	@rm -rfv testing.exe.dSYM
 
 testing.exe: test.c universal-analytics.o util/http.o 
+	gcc $(COMPILE_FLAGS) $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) $(DEPEND_FLAGS) -o $@ $^
+
+static-testing.exe: test-static.c universal-analytics.o util/http.o 
 	gcc $(COMPILE_FLAGS) $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) $(DEPEND_FLAGS) -o $@ $^
 
 
