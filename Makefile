@@ -6,25 +6,28 @@ DEPEND_FLAGS=-l curl
 
 .PHONY: all clean test
 
-all: universal-analytics.o 
+all: build/universal-analytics.o
 
-test: testing.exe
+test: build/testing.exe build/static-testing.exe
 
 clean:
-	@rm -fv testing.exe universal-analytics.o util/http.o
-	@rm -rfv testing.exe.dSYM
+	@rm -fv build/*.exe build/*.o
+	@rm -rfv *.exe.dSYM build
 
-testing.exe: test.c universal-analytics.o util/http.o 
+build/testing.exe: test.c build/universal-analytics.o build/http.o 
+	mkdir -p `dirname $@`
 	gcc $(COMPILE_FLAGS) $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) $(DEPEND_FLAGS) -o $@ $^
 
-static-testing.exe: test-static.c universal-analytics.o util/http.o 
+build/static-testing.exe: test-static.c build/universal-analytics.o build/http.o 
+	mkdir -p `dirname $@`
 	gcc $(COMPILE_FLAGS) $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) $(DEPEND_FLAGS) -o $@ $^
 
-
-util/http.o: util/http.c util/http.h
+build/http.o: src/http.c src/http.h
+	mkdir -p `dirname $@`
 	gcc $(COMPILE_FLAGS) $(DEBUG_FLAGS) -o $@  -c $<
 
-universal-analytics.o: universal-analytics.c universal-analytics.h
+build/universal-analytics.o: src/universal-analytics.c src/universal-analytics.h
+	mkdir -p `dirname $@`
 	gcc $(COMPILE_FLAGS) $(DEBUG_FLAGS) -o $@ -c $<
 
 

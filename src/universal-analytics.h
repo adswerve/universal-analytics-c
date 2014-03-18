@@ -11,7 +11,7 @@
 #ifndef UNIVERSALANALYTICS_HEADER_GUARD
 #define UNIVERSALANALYTICS_HEADER_GUARD 1
 
-#include "util/http.h"
+#include "http.h"
 
 /* These definitions are primarily for planning memory allocation and loop sentinels;
  * eventually they'll be converted to enums... */
