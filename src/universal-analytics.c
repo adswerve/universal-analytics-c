@@ -359,9 +359,16 @@ unsigned int assembleQueryString(UATracker_t* tracker, char* query, unsigned int
   int name_len;
   unsigned int value_len;
 
+  // Shortcut for client_id for more readable assertion below
+  char* client_id = tracker->map_parameters[UA_CLIENT_ID];
+
+
   for(i = 0; i < UA_MAX_PARAMETERS; i++){
     
     getCurrentParameterValue(tracker, i, & name, & value);
+
+    // Validate parameters given
+    assert((name == client_id) ? (value != NULL) : 1);
     if(NULL == name || NULL == value)  continue;
 
     name_len = strlen(name);
