@@ -6,13 +6,17 @@ DEPEND_FLAGS=-l curl
 
 .PHONY: all clean test
 
-all: build/universal-analytics.o
+all: build/universal-analytics.o build/http.o
 
 test: build/testing.exe build/static-testing.exe
 
 clean:
 	@rm -fv build/*.exe build/*.o
 	@rm -rfv *.exe.dSYM build
+
+
+build/libanalytics.a: build/http.o build/universal-analytics.o
+	ar -rs $@ $<
 
 build/testing.exe: test.c build/universal-analytics.o build/http.o 
 	mkdir -p `dirname $@`
