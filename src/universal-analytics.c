@@ -37,7 +37,7 @@ static int encodeURIComponent(char input[], char output[], const unsigned int in
   assert(NULL != input); // avoid null-dereference
   int i, j = 0;
   for(i = 0; i < input_len; i++){
-    if(isalnum(input[i]) || input[i] == '-' || input[i] == '.' || input[i] == '~'){
+    if(isalnum((unsigned char) input[i]) || input[i] == '-' || input[i] == '.' || input[i] == '~'){
       output[j++] = input[i];
     } else if(input[i] == ' '){
       output[j++] = '+';
