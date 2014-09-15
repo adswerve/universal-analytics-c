@@ -42,6 +42,7 @@ typedef enum boolean {
 typedef enum trackingType {
   UA_PAGEVIEW = 0,
   UA_APPVIEW,
+  UA_SCREENVIEW,
   UA_EVENT,
   UA_TRANSACTION,
   UA_TRANSACTION_ITEM,
@@ -81,6 +82,8 @@ typedef enum trackingField {
   UA_USER_LANGUAGE,
   UA_APP_NAME,
   UA_APP_VERSION,
+  UA_APP_ID,
+  UA_APP_INSTALLER_ID,
   UA_CONTENT_DESCRIPTION,
   UA_SCREEN_NAME,
   UA_EVENT_CATEGORY,

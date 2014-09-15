@@ -48,6 +48,19 @@ int main(int argc, char** argv){
   printf("Sending core pageview\n");
   sendTracking(tracker, UA_PAGEVIEW, NULL);
   
+  UAOptions mobileOptions = {{
+    {UA_APP_ID, 0, "org.example.application"},
+    {UA_APP_INSTALLER_ID, 0, "test-kit"},
+    {UA_APP_NAME, 0, "My Application"},
+    {UA_SCREEN_NAME, 0, "My Mobile Home Screen"},
+    {UA_EVENT_CATEGORY, 0, "Mobile"},
+    {UA_EVENT_ACTION, 0, "App Start"}
+  }};
+
+
+  printf("Sending mobile screenview\n");
+  sendTracking(tracker, UA_SCREENVIEW, & mobileOptions);
+
   
   /* Static definition of a group of options (in stack space) */
   UAOptions opts = {{

@@ -67,7 +67,8 @@ static int encodeURIComponent(char input[], char output[], const unsigned int in
  * protocol module. */
 static inline int populateTypeNames(char* types[]){
   types[UA_PAGEVIEW] = "pageview";
-  types[UA_APPVIEW] = "appview";
+  types[UA_APPVIEW] = "screenview";
+  types[UA_SCREENVIEW] = "screenview";
   types[UA_EVENT] = "event";
   types[UA_TRANSACTION] = "trans";
   types[UA_TRANSACTION_ITEM] = "item";
@@ -108,7 +109,9 @@ static inline void populateParameterNames(char* params[], const char* custom_par
   params[UA_SCREEN_COLORS] = "sd";
   params[UA_USER_LANGUAGE] = "ul";
   params[UA_APP_NAME] = "an";
+  params[UA_APP_ID] = "aid";
   params[UA_APP_VERSION] = "av";
+  params[UA_APP_INSTALLER_ID] = "aiid";
   params[UA_CONTENT_DESCRIPTION] = "cd";
   params[UA_SCREEN_NAME] = "cd";
   params[UA_EVENT_CATEGORY] = "ec";
