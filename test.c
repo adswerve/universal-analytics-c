@@ -13,10 +13,16 @@
 
 
 int main(int argc, char** argv){
-  
-  int total_requests = 25; /* To run over the request maximum a few times... */
+ 
   int i;
-  
+ 
+  unsigned int test_http_buffer = 0; /* Toggle repetitive requests to confirm queuing behavior */
+  unsigned int test_http_total_requests = 25; /* To run over the request maximum a few times... */
+
+  char unicode_value[] = "Ech kan Glas iessen, daat deet mir nët wei";
+
+
+
   /* Static definition of a group of options (in stack space) */
   UASettings settings = {{
       {UA_CUSTOM_DIMENSION, 5, "C library (5)"},
@@ -54,7 +60,8 @@ int main(int argc, char** argv){
     {UA_APP_NAME, 0, "My Application"},
     {UA_SCREEN_NAME, 0, "My Mobile Home Screen"},
     {UA_EVENT_CATEGORY, 0, "Mobile"},
-    {UA_EVENT_ACTION, 0, "App Start"}
+    {UA_EVENT_ACTION, 0, "App Start"},
+    {UA_EVENT_LABEL, 0, unicode_value}
   }};
 
 
@@ -75,9 +82,11 @@ int main(int argc, char** argv){
    * We're sending such a large batch to test the HTTP library's
    * non-blocking (queuing) behavior. 
    */
-  printf("Sending %d events\n", total_requests);
-  for(i = 0; i < total_requests; i++){
-    sendTracking(tracker, UA_EVENT, & opts); 
+  if(test_http_buffer){
+    printf("Sending %d events\n", test_http_total_requests);
+    for(i = 0; i < test_http_total_requests; i++){
+      sendTracking(tracker, UA_EVENT, & opts); 
+    }
   }
 
   /* Process the queued tracking, then clear the tracker's memory

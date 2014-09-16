@@ -29,6 +29,12 @@ static const char UA_PROTOCOL_VERSION[] = "1";
 /* Mapping for hexadecimal conversion */
 static const char _hexchar[] = "0123456789abcdef";
 
+
+static int isASCIIcompat(char char_val){
+  return (char_val == 0x09 || char_val == 0x0A || char_val == 0x0D || (0x20 <= char_val && char_val <= 0x7E));
+}
+
+
 /* Copies the input string to output with proper encoding.
  * Allows for populating substrings (i.e. ranges of memory) in existing string buffers.
  */
@@ -36,15 +42,18 @@ static int encodeURIComponent(char input[], char output[], const unsigned int in
   assert(NULL != output); // avoid null-dereference
   assert(NULL != input); // avoid null-dereference
   int i, j = 0;
+
   for(i = 0; i < input_len; i++){
     if(isalnum((unsigned char) input[i]) || input[i] == '-' || input[i] == '.' || input[i] == '~'){
       output[j++] = input[i];
     } else if(input[i] == ' '){
       output[j++] = '+';
-    } else {
+    } else if(isASCIIcompat(input[i])){
       output[j++] = '%';
       output[j++] = _hexchar[ (int) (input[i] >> 4) & 15];
       output[j++] = _hexchar[ (int) (input[i] & 15) & 15];
+    } else {
+      output[j++] = '_'; // Drop non-ascii chars.
     }
   }
 
@@ -59,6 +68,7 @@ static int encodeURIComponent(char input[], char output[], const unsigned int in
    * encoded character position +1. */
   return j;
 }
+
 
 
 
@@ -130,7 +140,7 @@ static inline void populateParameterNames(char* params[], const char* custom_par
   params[UA_TRANSACTION_SHIPPING] = "ts";
   params[UA_TRANSACTION_TAX] = "tt";
   params[UA_TRANSACTION_CURRENCY] = "cu";
-  params[UA_ITEM_CODE ] = "ic" ;
+  params[UA_ITEM_CODE] = "ic" ;
   params[UA_ITEM_NAME] = "in";
   params[UA_ITEM_VARIATION] = "iv";
   params[UA_ITEM_PRICE] = "ip";
@@ -387,6 +397,7 @@ unsigned int assembleQueryString(UATracker_t* tracker, char* query, unsigned int
 
     /* Fill in the encoded values */
     value_len = encodeURIComponent(value, (query + offset + name_len + 1), value_len, 0);
+    
     
     offset += (name_len + value_len + 1);
   }

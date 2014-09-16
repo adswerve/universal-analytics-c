@@ -28,7 +28,7 @@
 
 
 /* Boolean aliases for precise evaluation */
-typedef enum boolean {
+typedef enum {
   UA_FALSE = 0,
   UA_TRUE = 1
 } UABoolean_t;
