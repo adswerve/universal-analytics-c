@@ -12,6 +12,7 @@
 #define UNIVERSALANALYTICS_HEADER_GUARD 1
 
 #include "http.h"
+#include "string/encode.h"
 
 /* These definitions are primarily for planning memory allocation and loop sentinels;
  * eventually they'll be converted to enums... */

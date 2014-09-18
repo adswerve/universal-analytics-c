@@ -26,56 +26,6 @@ static const char UA_ENDPOINT[] = "https://www.google-analytics.com/collect";
 static const char UA_USERAGENT[] = "Analytics Pros - Universal Analytics for C";
 static const char UA_PROTOCOL_VERSION[] = "1";
 
-/* Mapping for hexadecimal conversion */
-static const char _hexchar[] = "0123456789abcdef";
-
-
-static int isASCIIcompat_char(char char_val){
-  return (char_val == 0x09 || char_val == 0x0A || char_val == 0x0D || (0x20 <= char_val && char_val <= 0x7E));
-}
-
-
-
-
-/* Copies the input string to output with proper encoding.
- * Allows for populating substrings (i.e. ranges of memory) in existing string buffers.
- */
-static int encodeURIComponent(char input[], char output[], const unsigned int input_len, const unsigned int output_max, const UABoolean_t add_null){
-  assert(NULL != output); // avoid null-dereference
-  assert(NULL != input); // avoid null-dereference
-  int i, j = 0;
-  int stop_limit = output_max - 1;
-
-  for(i = 0; i < input_len; i++){
-    if(j > stop_limit){
-      break;
-    }
-    if(isalnum((unsigned char) input[i]) || input[i] == '-' || input[i] == '.' || input[i] == '~'){
-      output[j++] = input[i];
-    } else if(input[i] == ' '){
-      output[j++] = '+';
-    } else if(isASCIIcompat_char(input[i])){
-      output[j++] = '%';
-      output[j++] = _hexchar[ (int) (input[i] >> 4) & 15];
-      output[j++] = _hexchar[ (int) (input[i] & 15) & 15];
-    } else {
-      output[j++] = '_'; // Drop non-ascii chars.
-    }
-  }
-
-  /* Null termination is optional, to permit sequential calls 
-   * of this method against multiple parameters into a single
-   * output string */
-  if((add_null == UA_TRUE) && (j < output_max)) 
-    output[j++] = '\0';
- 
-  /* Because {j} is incremented as a position index through this process,
-   * it represents the length of the string at the end. It will be the last
-   * encoded character position +1. */
-  return j;
-}
-
-
 
 
 /* Define tracking type strings; these are protocol-constants for
@@ -404,7 +354,7 @@ unsigned int assembleQueryString(UATracker_t* tracker, char* query, unsigned int
 
     /* Fill in the encoded values */
     current = (query + offset + name_len + 1);
-    value_len = encodeURIComponent(value, current, value_len, (UA_MAX_QUERY_LEN - ((unsigned int)(current - query))), 0);
+    value_len = encodeURIComponent(value, current, value_len, (UA_MAX_QUERY_LEN - ((unsigned int)(current - query))));
     
     
     offset += (name_len + value_len + 1);

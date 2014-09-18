@@ -19,6 +19,7 @@ int main(int argc, char** argv){
   unsigned int test_http_buffer = 0; /* Toggle repetitive requests to confirm queuing behavior */
   unsigned int test_http_total_requests = 25; /* To run over the request maximum a few times... */
 
+  // This value will show with the word "nët" encoded as "n%c3%abt" on the query string
   char unicode_value[] = "Ech kan Glas iessen, daat deet mir nët wei";
 
 
@@ -61,7 +62,7 @@ int main(int argc, char** argv){
     {UA_SCREEN_NAME, 0, "My Mobile Home Screen"},
     {UA_EVENT_CATEGORY, 0, "Mobile"},
     {UA_EVENT_ACTION, 0, "App Start"},
-    {UA_EVENT_LABEL, 0, unicode_value}
+    {UA_EVENT_LABEL, 0, unicode_value} // This value will leverage the UTF-8 encoding
   }};
 
 
