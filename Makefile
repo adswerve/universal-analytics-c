@@ -20,11 +20,12 @@ clean:
 build/libanalytics.a: build/http.o build/universal-analytics.o
 	ar -rs $@ $<
 
-build/testing.exe: test.c build/universal-analytics.o build/http.o build/encode.o
+
+build/testing.exe: test/main.c build/universal-analytics.o build/http.o build/encode.o
 	mkdir -p `dirname $@`
 	gcc $(COMPILE_FLAGS) $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) $(DEPEND_FLAGS) -o $@ $^
 
-build/static-testing.exe: test-static.c build/universal-analytics.o build/http.o build/encode.o
+build/static-testing.exe: test/static-alloc.c build/universal-analytics.o build/http.o build/encode.o
 	mkdir -p `dirname $@`
 	gcc $(COMPILE_FLAGS) $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) $(DEPEND_FLAGS) -o $@ $^
 

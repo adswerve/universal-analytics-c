@@ -8,7 +8,7 @@
 ******************************************************************************/
 
 #include <stdlib.h>
-#include "src/universal-analytics.h"
+#include "../src/universal-analytics.h"
 
 
 

@@ -13,8 +13,8 @@ For the most accurate data in your reports, Analytics Pros recommends establishi
 
 Please see the the following examples:
 
-- [test.c](./test.c) for dynamic allocation example
-- [test-static.c](./test-static.c) for static allocation example
+- [main.c](./test/main.c) for dynamic allocation example
+- [static-alloc.c](./test/static-alloc.c) for static allocation example
 
 
 We'll be building out additional examples of all available tracking within it. Currently it only highlights Pageview and Event tracking, but the remaining types should be fairly intuitive extensions.
