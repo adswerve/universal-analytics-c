@@ -63,6 +63,18 @@ unsigned int hexadecimal(char* output, unsigned int value){
 
 }
 
+// Primarily intended to aid the translation of binary MD5 digests
+unsigned int hexdigest(char* hex_output, unsigned char* binary, unsigned int binary_len){
+	unsigned int i;
+	unsigned int o = 0;
+	for(i = 0; i < binary_len; i++){
+		o += hexadecimal(hex_output + o, (unsigned int) binary[i]);
+	}	
+	return o;
+}
+
+
+
 
 
 static int isASCIIcompat_char(char char_val){
@@ -87,8 +99,12 @@ size_t urlencode_put(char* result, size_t result_max, const char *multibyte_inpu
 		// Convert the current multi-byte character into a wide representation (i.e. unsigned long int)
 		offset += mbtowc(& current, (multibyte_input) + (offset), MB_CUR_MAX);
 
+		if(current == 0){
+			break; // Stop on NULL termination
+		}
+
 		// Spaces are encoded as "plus" (+)
-		if(current == ' ' && r < result_max){ 
+		else if(current == ' ' && r < result_max){ 
 			result[r++] = '+';
 			continue;
 		} 
@@ -111,13 +127,12 @@ size_t urlencode_put(char* result, size_t result_max, const char *multibyte_inpu
 			r+= hexadecimal(result + r, (unsigned int) current);
 		}
 
-		// This character hasn't been properly encoded already...
-		else if(current > 0 && r < result_max){
-			result[r++]  = '*';
-		}
 
-		else if(current == 0){
-			break; // Stop on NULL termination
+		// This would seem to be an encoding error.
+		// Considering fall-back to "hexdigest" representation.
+		else if(result_max > r) {
+			result[r++] = '*';
+			break;
 		}
 
 	} while((i++) < input_len && (r < result_max));
@@ -157,5 +172,7 @@ char* urlencode(const char* mb_input){
 unsigned int encodeURIComponent(char input[], char output[], const unsigned int input_len, const unsigned int output_max){
 	return urlencode_put(output, output_max, input, input_len);
 }
+
+
 
 

@@ -10,7 +10,7 @@ all: build/universal-analytics.o build/http.o
 
 test: test-strings build/testing.exe build/static-testing.exe 
 
-test-strings: build/string.o build/strings.exe
+test-strings: build/strings.exe
 
 clean:
 	@rm -fv build/*.exe build/*.o
@@ -29,15 +29,11 @@ build/static-testing.exe: test-static.c build/universal-analytics.o build/http.o
 	gcc $(COMPILE_FLAGS) $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) $(DEPEND_FLAGS) -o $@ $^
 
 
-build/strings.exe: test/test_string.c build/string.o build/encode.o
+build/strings.exe: test/test_string.c build/encode.o
 	mkdir -p `dirname $@`
 	gcc $(COMPILE_FLAGS) $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) $(DEPEND_FLAGS) -o $@ $^
 
 build/encode.o: src/string/encode.c src/string/encode.h
-	mkdir -p `dirname $@`
-	gcc $(COMPILE_FLAGS) $(DEBUG_FLAGS) -o $@ -c $<
-
-build/string.o: src/string/string.c src/string/string.h
 	mkdir -p `dirname $@`
 	gcc $(COMPILE_FLAGS) $(DEBUG_FLAGS) -o $@ -c $<
 
