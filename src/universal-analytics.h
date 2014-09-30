@@ -17,7 +17,7 @@
 /* These definitions are primarily for planning memory allocation and loop sentinels;
  * eventually they'll be converted to enums... */
 #define UA_MAX_TYPES 8
-#define UA_MAX_FIELD_INDEX 57
+#define UA_MAX_FIELD_INDEX 59
 #define UA_MAX_CUSTOM_DIMENSION 200
 #define UA_MAX_CUSTOM_METRIC 200
 #define UA_START_CDIMENSIONS 57 
@@ -63,6 +63,7 @@ typedef enum trackingField {
   UA_TRACKING_ID, /* string like UA-XXXXX-Y */
   UA_CLIENT_ID,
   UA_USER_ID,
+  UA_ANONYMIZE_IP,
   UA_DOCUMENT_PATH,
   UA_DOCUMENT_TITLE,
   UA_DOCUMENT_LOCATION,

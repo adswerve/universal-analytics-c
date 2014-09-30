@@ -55,6 +55,7 @@ static inline void populateParameterNames(char* params[], const char* custom_par
   params[UA_TRACKING_ID] = "tid";
   params[UA_CLIENT_ID] = "cid";
   params[UA_USER_ID] = "uid";
+  params[UA_ANONYMIZE_IP] = "aip";
   params[UA_TRACKING_TYPE] = "t";
   params[UA_DOCUMENT_PATH] = "dp";
   params[UA_DOCUMENT_TITLE] = "dt";

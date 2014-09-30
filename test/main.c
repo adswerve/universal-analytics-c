@@ -26,6 +26,7 @@ int main(int argc, char** argv){
 
   /* Static definition of a group of options (in stack space) */
   UASettings settings = {{
+      {UA_ANONYMIZE_IP, 0, "1"}, /* IP anonymization for privacy-aware contexts (e.g. apps in EU) */
       {UA_CUSTOM_DIMENSION, 5, "C library (5)"},
       {UA_CUSTOM_DIMENSION, 7, "Custom Dimension 7"},
       {UA_CUSTOM_METRIC, 5, "55"},
