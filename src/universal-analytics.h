@@ -17,7 +17,7 @@
 /* These definitions are primarily for planning memory allocation and loop sentinels;
  * eventually they'll be converted to enums... */
 #define UA_MAX_TYPES 8
-#define UA_MAX_FIELD_INDEX 59
+#define UA_MAX_FIELD_INDEX 69
 #define UA_MAX_CUSTOM_DIMENSION 200
 #define UA_MAX_CUSTOM_METRIC 200
 #define UA_START_CDIMENSIONS 57 
@@ -71,6 +71,7 @@ typedef enum trackingField {
   UA_DOCUMENT_REFERRER,
   UA_DOCUMENT_ENCODING,
   UA_QUEUE_TIME_MS,
+  UA_CACHE_BUSTER,
   UA_SESSION_CONTROL,
   UA_CAMPAIGN_NAME,
   UA_CAMPAIGN_SOURCE,
@@ -82,6 +83,7 @@ typedef enum trackingField {
   UA_VIEWPORT_SIZE,
   UA_SCREEN_COLORS,
   UA_USER_LANGUAGE,
+  UA_USER_AGENT,
   UA_APP_NAME,
   UA_APP_VERSION,
   UA_APP_ID,
@@ -104,9 +106,11 @@ typedef enum trackingField {
   UA_TRANSACTION_SHIPPING,
   UA_TRANSACTION_TAX,
   UA_TRANSACTION_CURRENCY,
+  UA_CURRENCY_CODE,
   UA_ITEM_CODE, 
   UA_ITEM_NAME,
   UA_ITEM_VARIATION,
+  UA_ITEM_CATEGORY,
   UA_ITEM_PRICE,
   UA_ITEM_QUANTITY,
   UA_TIMING_CATEGORY,
@@ -118,6 +122,11 @@ typedef enum trackingField {
   UA_TIMING_REDIRECT,
   UA_TIMING_TCP_CONNECT,
   UA_TIMING_SERVER_RESPONSE,
+  UA_ADWORDS_ID,
+  UA_DISPLAY_AD_ID,
+  UA_LINK_ID,
+  UA_JAVA_ENABLED,
+  UA_FLASH_VERSION,
   UA_CUSTOM_DIMENSION,
   UA_CUSTOM_METRIC
 } trackingField_t;

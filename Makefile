@@ -4,13 +4,13 @@ COMPILE_FLAGS=-Wall -stdlib=libstdc++
 DEPEND_FLAGS=-l curl
 # OPTIMIZE_FLAGS=-O3
 
-.PHONY: all clean test test-util
+.PHONY: all clean test archive
 
-all: build/universal-analytics.o build/http.o
+all: test archive
 
-test: test-strings build/testing.exe build/static-testing.exe 
+test: build/testing.exe build/static-testing.exe build/strings.exe 
 
-test-strings: build/strings.exe
+archive: build/libanalytics.a
 
 clean:
 	@rm -fv build/*.exe build/*.o

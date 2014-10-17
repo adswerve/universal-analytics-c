@@ -64,6 +64,7 @@ static inline void populateParameterNames(char* params[], const char* custom_par
   params[UA_DOCUMENT_REFERRER] = "dr";
   params[UA_DOCUMENT_ENCODING] = "de";
   params[UA_QUEUE_TIME_MS] = "qt";
+  params[UA_CACHE_BUSTER] = "z";
   params[UA_SESSION_CONTROL] = "sc";
   params[UA_CAMPAIGN_NAME] = "cn";
   params[UA_CAMPAIGN_SOURCE] = "cs";
@@ -75,6 +76,7 @@ static inline void populateParameterNames(char* params[], const char* custom_par
   params[UA_VIEWPORT_SIZE] = "vp";
   params[UA_SCREEN_COLORS] = "sd";
   params[UA_USER_LANGUAGE] = "ul";
+  params[UA_USER_AGENT] = "ua";
   params[UA_APP_NAME] = "an";
   params[UA_APP_ID] = "aid";
   params[UA_APP_VERSION] = "av";
@@ -97,9 +99,11 @@ static inline void populateParameterNames(char* params[], const char* custom_par
   params[UA_TRANSACTION_SHIPPING] = "ts";
   params[UA_TRANSACTION_TAX] = "tt";
   params[UA_TRANSACTION_CURRENCY] = "cu";
+  params[UA_CURRENCY_CODE] = "cu"; /* for compatibility with Google's naming convention */
   params[UA_ITEM_CODE] = "ic" ;
   params[UA_ITEM_NAME] = "in";
-  params[UA_ITEM_VARIATION] = "iv";
+  params[UA_ITEM_VARIATION] = "iv"; /* a more literal acronym/alias */
+  params[UA_ITEM_CATEGORY] = "iv"; /* for compatibility with Google's naming convention */
   params[UA_ITEM_PRICE] = "ip";
   params[UA_ITEM_QUANTITY] = "iq";
   params[UA_TIMING_CATEGORY] = "utc";
@@ -112,6 +116,11 @@ static inline void populateParameterNames(char* params[], const char* custom_par
   params[UA_TIMING_TCP_CONNECT] = "tcp";
   params[UA_TIMING_SERVER_RESPONSE] = "srt";
   params[UA_VERSION_NUMBER] = "v";
+  params[UA_ADWORDS_ID] = "gclid";
+  params[UA_DISPLAY_AD_ID] = "dclid";
+  params[UA_LINK_ID] = "linkid";
+  params[UA_JAVA_ENABLED] = "je";
+  params[UA_FLASH_VERSION] = "fl";
  
   /* Populate dimension space */
   for(i = 0; i < UA_MAX_CUSTOM_DIMENSION; i++){

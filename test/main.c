@@ -26,14 +26,17 @@ int main(int argc, char** argv){
 
   /* Static definition of a group of options (in stack space) */
   UASettings settings = {{
-      {UA_ANONYMIZE_IP, 0, "1"}, /* IP anonymization for privacy-aware contexts (e.g. apps in EU) */
+      {UA_DOCUMENT_PATH, 0, "/virtual/test/C"},
+      {UA_DOCUMENT_TITLE, 0, "This is a test in C"},
       {UA_CUSTOM_DIMENSION, 5, "C library (5)"},
       {UA_CUSTOM_DIMENSION, 7, "Custom Dimension 7"},
-      {UA_CUSTOM_METRIC, 5, "55"},
-      {UA_CUSTOM_METRIC, 7, "77"},
-      {UA_DOCUMENT_PATH, 0, "/virtual/test/C"},
-      {UA_DOCUMENT_TITLE, 0, "This is a test in C"}
+      {UA_CUSTOM_METRIC, 5, "2451"}, /* A numeric string, custom metric index 5 */
+      {UA_USER_AGENT, 0, "Opera/9.80 (Windows NT 6.0) Presto/2.12.388 Version/12.14"},
+      {UA_ANONYMIZE_IP, 0, "1"} /* IP anonymization for privacy-aware contexts (e.g. apps in EU) */
   }};
+
+
+
 
 
   /* createTracker() calls malloc for the entire size required by
@@ -46,9 +49,10 @@ int main(int argc, char** argv){
    * of the tracker's life (i.e. at removeTracker() below) */
   setTrackerOption(tracker, UA_OPTION_QUEUE, 1);
 
-
   /* Store these options permanently (for the lifetime of the tracker) */
   setParameters(tracker, & settings); 
+
+
 
   /* Send a pageview, with no additional options.
    * Processes only the parameters that are set permanently in the 
@@ -56,6 +60,9 @@ int main(int argc, char** argv){
   printf("Sending core pageview\n");
   sendTracking(tracker, UA_PAGEVIEW, NULL);
   
+
+
+
   UAOptions mobileOptions = {{
     {UA_APP_ID, 0, "org.example.application"},
     {UA_APP_INSTALLER_ID, 0, "test-kit"},
@@ -71,6 +78,8 @@ int main(int argc, char** argv){
   sendTracking(tracker, UA_SCREENVIEW, & mobileOptions);
 
   
+
+
   /* Static definition of a group of options (in stack space) */
   UAOptions opts = {{
     {UA_EVENT_CATEGORY, 0, "Event Category"},
