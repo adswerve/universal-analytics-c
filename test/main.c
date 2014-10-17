@@ -43,7 +43,11 @@ int main(int argc, char** argv){
    * the tracker; all memory it requires (except for CURL) is
    * allocated within this call. */
   UATracker tracker = createTracker("UA-XXXXX-Y", "abc1234", NULL);
-  
+ 
+  /* Override the User Agent HTTP header */
+  tracker->user_agent = "user_agent_test";
+
+
   /* Enable queing 
    * This causes all requests to be queued until the "cleanup" phase
    * of the tracker's life (i.e. at removeTracker() below) */

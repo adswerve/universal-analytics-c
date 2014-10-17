@@ -23,7 +23,7 @@
 
 
 static const char UA_ENDPOINT[] = "https://www.google-analytics.com/collect";
-static const char UA_USERAGENT[] = "Analytics Pros - Universal Analytics for C";
+static const char UA_USER_AGENT_DEFAULT[] = "Analytics Pros - Universal Analytics for C";
 static const char UA_PROTOCOL_VERSION[] = "1";
 
 
@@ -277,12 +277,15 @@ void initTracker(UATracker_t* tracker, char* trackingId, char* clientId, char* u
   
   (*tracker).__configured__ = UA_MEM_MAGIC_CONFIG;
 
+  tracker->user_agent = (char*) UA_USER_AGENT_DEFAULT;
+  
   populateTypeNames(tracker->map_types);
   populateParameterNames(tracker->map_parameters, tracker->map_custom);
 
   memset(& tracker->query, 0, UA_MAX_QUERY_LEN);
 
   HTTPsetup(& tracker->queue);
+
 
   setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, UA_VERSION_NUMBER, 0, UA_PROTOCOL_VERSION);
   setParameterCore(tracker->map_parameters, tracker->lifetime_parameters, UA_TRACKING_ID, 0, trackingId);
@@ -383,7 +386,7 @@ void queueTracking(UATracker_t* tracker){
   memset(query, 0, UA_MAX_QUERY_LEN);
   query_len = assembleQueryString(tracker, query, 0);
 
-  HTTPenqueue(& tracker->queue, UA_ENDPOINT, UA_USERAGENT, query, query_len); 
+  HTTPenqueue(& tracker->queue, UA_ENDPOINT, tracker->user_agent, query, query_len); 
 }
 
 /* Prepare ephemeral state on a tracker and dispatch its query */

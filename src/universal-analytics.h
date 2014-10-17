@@ -180,6 +180,8 @@ typedef struct UATracker_t {
    * during tracker initialization */
   char* map_types[ UA_MAX_TYPES ];
 
+  /* Placeholder for HTTP "User-Agent" header */
+  const char* user_agent;
 
   /* Stash space for the query strings generated through |sendTracking| */
   char query[ UA_MAX_QUERY_LEN ];
