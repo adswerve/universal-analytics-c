@@ -5,7 +5,7 @@ This library provides a C interface to Google Analytics, supporting the Universa
 **NOTE** this project is reasonably feature-complete for most use-cases, covering all relevant features of the Measurement Protocol, however we still consider it _beta_. Please feel free to file issues for feature requests.
 
 # Contact
-Email: `opensource@analyticspros.com`
+Email: `opensource@adswerve.com`
 
 # Usage
 
